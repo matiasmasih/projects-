@@ -19,8 +19,8 @@ def load_data():
         with open(DATA_FILE, mode='r', newline='') as file:
             reader = csv.DictReader(file)
             for row in reader:
-                # Convert the 'scores' string back to a list of integers
-                row['scores'] = eval(row['scores'])  # Convert string back to list
+                scores = [int(row[f'score_{i+1}']) for i in range(NUM_SUBJECTS)]
+                row['scores'] = scores
                 row['total_score'] = float(row['total_score'])
                 row['average_score'] = float(row['average_score'])
                 students.append(row)
@@ -29,10 +29,13 @@ def load_data():
 # Save student data to the file
 def save_data(data):
     with open(DATA_FILE, mode='w', newline='') as file:
-        fieldnames = ['id', 'first_name', 'last_name', 'email', 'scores', 'total_score', 'average_score']
+        fieldnames = ['id', 'first_name', 'last_name', 'email'] + [f'score_{i+1}' for i in range(NUM_SUBJECTS)] + ['total_score', 'average_score']
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(data)
+        for row in data:
+            for i in range(NUM_SUBJECTS):
+                row[f'score_{i+1}'] = row['scores'][i]
+            writer.writerow(row)
 
 # Function to fetch and display all students in a colorful table format
 def fetch_students():
@@ -42,8 +45,10 @@ def fetch_students():
         Fore.RED + 'ID',
         Fore.GREEN + 'First Name',
         Fore.YELLOW + 'Last Name',
-        Fore.CYAN + 'Email',
-        Fore.MAGENTA + f'Scores (Out of {NUM_SUBJECTS})',
+        Fore.CYAN + 'Email'
+    ] + [
+        Fore.MAGENTA + f'Score {i+1}' for i in range(NUM_SUBJECTS)
+    ] + [
         Fore.BLUE + 'Total Score',
         Fore.WHITE + 'Average Score'
     ]
@@ -53,10 +58,12 @@ def fetch_students():
             Fore.RED + student.get('id', 'N/A'),
             Fore.GREEN + student.get('first_name', 'N/A'),
             Fore.YELLOW + student.get('last_name', 'N/A'),
-            Fore.CYAN + student.get('email', 'N/A'),
-            Fore.MAGENTA + str(student.get('scores', [0] * NUM_SUBJECTS)),
+            Fore.CYAN + student.get('email', 'N/A')
+        ] + [
+            Fore.MAGENTA + str(student.get(f'scores', [0] * NUM_SUBJECTS)[i]) for i in range(NUM_SUBJECTS)
+        ] + [
             Fore.BLUE + str(student.get('total_score', 0)),
-            Fore.WHITE + f"{student.get('average_score', 0):.2f}"
+            Fore.WHITE + f"{float(student.get('average_score', 0)):.2f}"
         ])
     
     print(tabulate(table, headers, tablefmt='fancy_grid'))
@@ -131,7 +138,7 @@ def edit_student():
         # Recalculate total_score and average_score
         total_score = sum(scores)
         average_score = total_score / len(scores)
-        student_to_edit['scores'] = str(scores)  # Convert list to string for CSV
+        student_to_edit['scores'] = scores
         student_to_edit['total_score'] = total_score
         student_to_edit['average_score'] = average_score
 
